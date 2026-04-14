@@ -3,3 +3,5 @@ dist/
 *.xcodeproj
 *.xcworkspace
 .DS_Store
+.claude/
+.idea/
