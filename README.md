@@ -21,7 +21,14 @@ A lightweight macOS menu bar app that shows your [Claude Code](https://claude.ai
 
 ## Installation
 
-### Download (recommended)
+### Homebrew (recommended)
+
+```bash
+brew tap joinnow-io/tap
+brew install --cask claude-quota
+```
+
+### Download
 
 1. Download `ClaudeQuota.zip` from the [latest release](../../releases/latest)
 2. Unzip and drag `ClaudeQuota.app` to `/Applications`
