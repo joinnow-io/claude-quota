@@ -149,7 +149,10 @@ actor UsageAPIService {
         let attributes: [String: Any] = [
             kSecValueData as String: updatedData,
         ]
-        SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
+        let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
+        if updateStatus != errSecSuccess {
+            print("⚠️ Keychain update failed: \(updateStatus)")
+        }
     }
 
     private func callUsageAPI(token: String) async throws -> UsageAPIResponse {
