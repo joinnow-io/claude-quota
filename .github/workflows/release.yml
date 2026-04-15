@@ -17,8 +17,14 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.app
 
-      - name: Build release binary
-        run: swift build -c release
+      - name: Build release binary (universal)
+        run: |
+          swift build -c release --arch arm64
+          swift build -c release --arch x86_64
+          lipo -create \
+            .build/arm64-apple-macosx/release/ClaudeQuota \
+            .build/x86_64-apple-macosx/release/ClaudeQuota \
+            -output .build/release/ClaudeQuota
 
       - name: Package .app bundle
         run: bash scripts/make-app.sh
