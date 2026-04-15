@@ -41,7 +41,8 @@
     }
     nav .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; }
     nav .logo svg { width: 30px; height: 30px; }
-    nav .nav-links { display: flex; gap: 1.8rem; font-size: 0.9rem; color: var(--muted); }
+    nav .logo:hover { text-decoration: none; color: var(--text); }
+    nav .nav-links { display: flex; gap: 1.8rem; font-size: 0.9rem; color: var(--muted); white-space: nowrap; }
     nav .nav-links a { color: var(--muted); }
     nav .nav-links a:hover { color: var(--text); text-decoration: none; }
 
@@ -82,7 +83,7 @@
 
     /* SCREENSHOT */
     .screenshot-wrap {
-      max-width: 460px; margin: 50px auto 0;
+      max-width: 640px; margin: 50px auto 0;
       border-radius: 14px; overflow: hidden;
       box-shadow: 0 20px 60px rgba(0,0,0,0.12);
       border: 1px solid var(--border);
@@ -171,7 +172,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="logo">
+  <a class="logo" href="#">
     <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
       <rect width="512" height="512" rx="110" fill="#d97757"/>
       <g transform="translate(44,64) scale(0.310)">
@@ -184,7 +185,7 @@
       </g>
     </svg>
     ClaudeQuota
-  </div>
+  </a>
   <div class="nav-links">
     <a href="#features">Features</a>
     <a href="#how-it-works">How it works</a>
