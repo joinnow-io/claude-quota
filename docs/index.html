@@ -209,7 +209,7 @@
     </a>
   </div>
   <div class="screenshot-wrap" style="margin-top:48px;">
-    <img src="../screenshot.png" alt="ClaudeQuota menu bar screenshot"/>
+    <img src="screenshot.png" alt="ClaudeQuota menu bar screenshot"/>
   </div>
 </div>
 
@@ -237,7 +237,7 @@
       <div class="feature-card">
         <div class="icon">⚡</div>
         <h3>Peak hours indicator</h3>
-        <p>Badge during weekday peak hours (5am–11am PT) when 5-hour limits are consumed faster.</p>
+        <p>Badge and countdown during weekday peak hours (5 am–11 am PT) when your 5-hour budget depletes faster. Affects Free, Pro, and Max plans. <a href="#faq">Learn more →</a></p>
       </div>
       <div class="feature-card">
         <div class="icon">🤖</div>
@@ -298,7 +298,7 @@
         </tr>
         <tr>
           <td>Peak hours</td>
-          <td>Computed locally (weekdays 12:00–18:00 UTC)</td>
+          <td>Computed locally (weekdays 12:00–18:00 UTC); see <a href="#faq">FAQ</a></td>
         </tr>
       </tbody>
     </table>
@@ -410,7 +410,16 @@ bash scripts/make-app.sh
       </details>
       <details>
         <summary>What are peak hours?</summary>
-        <p>Anthropic applies stricter 5-hour limits on weekdays during peak hours (5am–11am PT / 12:00–18:00 UTC). ClaudeQuota shows a ⚡ badge during this window so you know your budget is being consumed faster.</p>
+        <p>Anthropic adjusts 5-hour session limits for Free, Pro, and Max plans during <strong>weekday peak hours: 5 am–11 am PT</strong> (8 am–2 pm ET / 12:00–18:00 UTC). During this window, token costs against the 5-hour budget are effectively higher — your allowance depletes faster than wall-clock time. Weekly limits are unchanged.</p>
+        <p>ClaudeQuota shows a ⚡ badge during peak hours and a countdown to the next transition, so you always know when the tighter budget applies.</p>
+        <p><strong>Affected plans:</strong> Free, Pro ($20/mo), Max 5x ($100/mo), Max 20x ($200/mo). API customers are not affected.<br/>
+        <strong>Off-peak benefit:</strong> Anthropic expanded off-peak capacity to compensate.<br/>
+        <strong>Tip:</strong> Shift token-intensive background jobs to off-peak hours for more budget per dollar.</p>
+        <p style="margin-top:8px; font-size:0.85rem;">Sources:
+          <a href="https://support.claude.com/en/articles/11145838-using-claude-code-with-your-max-plan">Anthropic help center</a> ·
+          <a href="https://www.theregister.com/2026/03/26/anthropic_tweaks_usage_limits/">The Register</a> ·
+          <a href="https://github.com/anthropics/claude-code/issues/38335">GitHub issue #38335</a>
+        </p>
       </details>
       <details>
         <summary>What is the Local Details toggle?</summary>

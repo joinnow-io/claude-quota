@@ -58,7 +58,7 @@ bash scripts/make-app.sh
 | Per-model token breakdown | Local JSONL files (`~/.claude/projects/`) |
 | Today's tokens + cost estimate | Local JSONL files |
 | Plan / tier info | macOS Keychain (`Claude Code-credentials`) |
-| Peak hours | Computed locally (weekdays 12:00–18:00 UTC) |
+| Peak hours | Computed locally (weekdays 12:00–18:00 UTC); see [Peak hours](#peak-hours) |
 
 The app uses Claude Code's existing OAuth token from the macOS Keychain — no separate login or API key needed. The token is automatically refreshed when it expires.
 
@@ -72,6 +72,20 @@ The quota endpoint (`/api/oauth/usage`) is an undocumented internal API. To be a
 - A minimum of **30 seconds** is enforced between any two calls
 - On a `429 Too Many Requests` response the app backs off for **5 minutes** before retrying
 - The manual **Refresh** button always fires immediately and clears any active backoff
+
+## Peak hours
+
+Anthropic adjusts 5-hour session limits for Free, Pro, and Max plans during **weekday peak hours: 5 am–11 am PT (8 am–2 pm ET / 12:00–18:00 UTC)**. During this window, token costs against the 5-hour budget are effectively higher — the allowance depletes faster than wall-clock time. Weekly limits are unchanged; only the 5-hour distribution shifts.
+
+ClaudeQuota shows a ⚡ badge in the menu bar during peak hours and a countdown to the next transition.
+
+Key details:
+
+- **Affected plans:** Free, Pro ($20/mo), Max 5x ($100/mo), Max 20x ($200/mo). API customers are not affected.
+- **Off-peak benefit:** Anthropic expanded off-peak capacity to compensate for the tighter peak-hour budget.
+- **Recommendation:** Shift token-intensive background jobs (bulk refactors, large code generation) to off-peak hours.
+
+Sources: [Anthropic help center](https://support.claude.com/en/articles/11145838-using-claude-code-with-your-max-plan) · [The Register](https://www.theregister.com/2026/03/26/anthropic_tweaks_usage_limits/) · [GitHub issue #38335](https://github.com/anthropics/claude-code/issues/38335)
 
 ## Privacy
 
