@@ -111,14 +111,20 @@ struct UsageMenuView: View {
             }
 
             if store.peakStatus.isPeak {
-                HStack(spacing: 4) {
-                    Image(systemName: "bolt.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
-                    Text(store.peakStatus.changeDescription)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
+                Button(action: { NSWorkspace.shared.open(Links.peakHours) }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                        Text(store.peakStatus.changeDescription)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.caption2)
+                            .foregroundStyle(.orange.opacity(0.6))
+                    }
                 }
+                .buttonStyle(.plain)
             }
 
             if let snapshot = store.snapshot {
@@ -219,6 +225,15 @@ struct UsageMenuView: View {
 
             Divider()
 
+            Button(action: { NSWorkspace.shared.open(Links.about) }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "info.circle")
+                    Text("About ClaudeQuota")
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.caption)
+
             Button("Quit ClaudeQuota") {
                 NSApplication.shared.terminate(nil)
             }
@@ -308,5 +323,10 @@ struct UsageMenuView: View {
         if fraction >= 0.95 { return .red }
         if fraction >= 0.80 { return .orange }
         return .green
+    }
+
+    private enum Links {
+        static let about = URL(string: "https://joinnow-io.github.io/claude-quota/")!
+        static let peakHours = URL(string: "https://joinnow-io.github.io/claude-quota/#peak-hours")!
     }
 }

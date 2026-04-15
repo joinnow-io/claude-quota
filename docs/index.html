@@ -191,6 +191,7 @@
     <a href="#how-it-works">How it works</a>
     <a href="#install">Install</a>
     <a href="#privacy">Privacy</a>
+    <a href="#peak-hours">Peak Hours</a>
     <a href="#faq">FAQ</a>
     <a href="https://github.com/joinnow-io/claude-quota">GitHub</a>
   </div>
@@ -397,6 +398,55 @@ bash scripts/make-app.sh
   </div>
 </section>
 
+<!-- PEAK HOURS -->
+<section id="peak-hours">
+  <div class="section-inner">
+    <div class="section-label">Peak Hours</div>
+    <h2>Understanding Claude Code peak hours</h2>
+    <p>Anthropic adjusts <strong>5-hour session limits</strong> for Free, Pro, and Max plans during <strong>weekday peak hours</strong>. During this window, token costs against the 5-hour budget are effectively higher — your allowance depletes faster than wall-clock time. Weekly (7-day) limits are unchanged.</p>
+
+    <table style="width:100%; border-collapse:collapse; margin:24px 0; font-size:0.95rem;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="text-align:left; padding:8px 12px;">Timezone</th>
+          <th style="text-align:left; padding:8px 12px;">Peak window</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px;">Pacific (PT)</td><td style="padding:8px 12px;"><strong>5 am – 11 am</strong></td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px;">Eastern (ET)</td><td style="padding:8px 12px;"><strong>8 am – 2 pm</strong></td></tr>
+        <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px;">UTC</td><td style="padding:8px 12px;"><strong>12:00 – 18:00</strong></td></tr>
+        <tr><td style="padding:8px 12px;">Central European (CET)</td><td style="padding:8px 12px;"><strong>1 pm – 7 pm</strong></td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:32px;">Affected plans</h3>
+    <ul style="margin:8px 0 0 20px; line-height:1.8;">
+      <li><strong>Free</strong> — affected</li>
+      <li><strong>Pro</strong> ($20/mo) — affected</li>
+      <li><strong>Max 5x</strong> ($100/mo) — affected</li>
+      <li><strong>Max 20x</strong> ($200/mo) — affected</li>
+      <li><strong>API customers</strong> — <em>not affected</em></li>
+    </ul>
+
+    <h3 style="margin-top:32px;">How ClaudeQuota helps</h3>
+    <p>ClaudeQuota shows a <span style="background:#f97316; color:white; font-size:0.75rem; font-weight:700; padding:1px 6px; border-radius:3px;">⚡ PEAK</span> badge in the menu bar during peak hours, plus a countdown to the next transition. You always know when the tighter budget applies — no guessing.</p>
+
+    <h3 style="margin-top:32px;">Tips</h3>
+    <ul style="margin:8px 0 0 20px; line-height:1.8;">
+      <li>Shift token-intensive background jobs to off-peak hours for more budget per dollar.</li>
+      <li>Anthropic expanded off-peak capacity to compensate — take advantage of evenings and weekends.</li>
+      <li>The 7-day window is unaffected, so spreading work across days helps too.</li>
+    </ul>
+
+    <p style="margin-top:24px; font-size:0.85rem; color:var(--muted);">Sources:
+      <a href="https://support.claude.com/en/articles/11145838-using-claude-code-with-your-max-plan">Anthropic help center</a> ·
+      <a href="https://www.theregister.com/2026/03/26/anthropic_tweaks_usage_limits/">The Register</a> ·
+      <a href="https://github.com/anthropics/claude-code/issues/38335">GitHub issue #38335</a>
+    </p>
+  </div>
+</section>
+
 <!-- FAQ -->
 <section id="faq">
   <div class="section-inner">
@@ -417,16 +467,7 @@ bash scripts/make-app.sh
       </details>
       <details>
         <summary>What are peak hours?</summary>
-        <p>Anthropic adjusts 5-hour session limits for Free, Pro, and Max plans during <strong>weekday peak hours: 5 am–11 am PT</strong> (8 am–2 pm ET / 12:00–18:00 UTC). During this window, token costs against the 5-hour budget are effectively higher — your allowance depletes faster than wall-clock time. Weekly limits are unchanged.</p>
-        <p>ClaudeQuota shows a ⚡ badge during peak hours and a countdown to the next transition, so you always know when the tighter budget applies.</p>
-        <p><strong>Affected plans:</strong> Free, Pro ($20/mo), Max 5x ($100/mo), Max 20x ($200/mo). API customers are not affected.<br/>
-        <strong>Off-peak benefit:</strong> Anthropic expanded off-peak capacity to compensate.<br/>
-        <strong>Tip:</strong> Shift token-intensive background jobs to off-peak hours for more budget per dollar.</p>
-        <p style="margin-top:8px; font-size:0.85rem;">Sources:
-          <a href="https://support.claude.com/en/articles/11145838-using-claude-code-with-your-max-plan">Anthropic help center</a> ·
-          <a href="https://www.theregister.com/2026/03/26/anthropic_tweaks_usage_limits/">The Register</a> ·
-          <a href="https://github.com/anthropics/claude-code/issues/38335">GitHub issue #38335</a>
-        </p>
+        <p>Weekday peak hours (5 am–11 am PT / 12:00–18:00 UTC) cause your 5-hour budget to deplete faster. See the full <a href="#peak-hours">Peak Hours</a> section for details, affected plans, and tips.</p>
       </details>
       <details>
         <summary>What is the Local Details toggle?</summary>
