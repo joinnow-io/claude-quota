@@ -1,7 +1,9 @@
+import AppKit
 import SwiftUI
 
 struct UsageMenuView: View {
     @Bindable var store: QuotaStore
+    @State private var tokenCopied = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -191,6 +193,16 @@ struct UsageMenuView: View {
             .buttonStyle(.plain)
             .font(.caption)
 
+            Button(action: { copyToken() }) {
+                HStack(spacing: 4) {
+                    Image(systemName: tokenCopied ? "checkmark" : "key")
+                    Text(tokenCopied ? "Copied!" : "Copy Token")
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.caption)
+            .disabled(store.credentials?.accessToken == nil)
+
             Toggle("Local Details", isOn: Binding(
                 get: { store.showLocalData },
                 set: { _ in store.toggleLocalData() }
@@ -280,6 +292,16 @@ struct UsageMenuView: View {
         .padding(.vertical, 1)
         .background(.orange)
         .clipShape(RoundedRectangle(cornerRadius: 3))
+    }
+
+    private func copyToken() {
+        guard let token = store.credentials?.accessToken else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(token, forType: .string)
+        tokenCopied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            tokenCopied = false
+        }
     }
 
     private func barColor(fraction: Double) -> Color {
