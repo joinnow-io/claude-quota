@@ -31,9 +31,7 @@ struct UsageMenuView: View {
             case .error(let msg):
                 errorSection(msg)
             case .loaded(let quota):
-                fiveHourSection(quota.fiveHour)
-                Divider()
-                sevenDaySection(quota.sevenDay)
+                limitSections(quota: quota)
             }
 
             // Local data sections (only if enabled and loaded)
@@ -88,29 +86,42 @@ struct UsageMenuView: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - 5-Hour Window
+    // MARK: - Limit sections (dynamic)
 
     @ViewBuilder
-    private func fiveHourSection(_ quota: UsageAPIResponse.WindowQuota) -> some View {
+    private func limitSections(quota: UsageAPIResponse) -> some View {
+        let keys = LimitKind.sorted(Array(quota.limits.keys)).filter { !store.popoverHidden(for: $0) }
+        ForEach(Array(keys.enumerated()), id: \.element) { index, key in
+            if let window = quota.limits[key] {
+                limitSection(key: key, window: window)
+                if index < keys.count - 1 {
+                    Divider()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func limitSection(key: String, window: UsageAPIResponse.WindowQuota) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("5-Hour Window")
+                Text(LimitKind.name(for: key))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                if store.peakStatus.isPeak {
+                if key == "five_hour", store.peakStatus.isPeak {
                     peakBadge
                 }
             }
 
-            percentageBar(utilization: quota.utilization)
+            percentageBar(utilization: window.utilization)
 
-            if let resetsAt = quota.resetsAtDate {
+            if let resetsAt = window.resetsAtDate {
                 Text("Resets in \(Formatting.timeRemaining(resetsAt.timeIntervalSince(store.now)))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            if store.peakStatus.isPeak {
+            if key == "five_hour", store.peakStatus.isPeak {
                 Button(action: { NSWorkspace.shared.open(Links.peakHours) }) {
                     HStack(spacing: 4) {
                         Image(systemName: "bolt.fill")
@@ -127,33 +138,18 @@ struct UsageMenuView: View {
                 .buttonStyle(.plain)
             }
 
+            // Local JSONL breakdown is only meaningful for the built-in windows.
             if let snapshot = store.snapshot {
-                modelBreakdown(snapshot.fiveHour)
-            }
-        }
-    }
-
-    // MARK: - 7-Day Window
-
-    @ViewBuilder
-    private func sevenDaySection(_ quota: UsageAPIResponse.WindowQuota) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("7-Day Window")
-                .font(.subheadline.weight(.semibold))
-
-            percentageBar(utilization: quota.utilization)
-
-            if let resetsAt = quota.resetsAtDate {
-                Text("Resets in \(Formatting.timeRemaining(resetsAt.timeIntervalSince(store.now)))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if let snapshot = store.snapshot, snapshot.sevenDay.messageCount > 0 {
-                Text("\(Formatting.tokensDetailed(snapshot.sevenDay.messageCount)) messages")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                modelBreakdown(snapshot.sevenDay)
+                if key == "five_hour" {
+                    modelBreakdown(snapshot.fiveHour)
+                } else if key == "seven_day" {
+                    if snapshot.sevenDay.messageCount > 0 {
+                        Text("\(Formatting.tokensDetailed(snapshot.sevenDay.messageCount)) messages")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    modelBreakdown(snapshot.sevenDay)
+                }
             }
         }
     }
@@ -223,6 +219,14 @@ struct UsageMenuView: View {
             .font(.caption)
             .toggleStyle(.checkbox)
 
+            Toggle("Slow sync (every 5 min)", isOn: Binding(
+                get: { store.slowSync },
+                set: { _ in store.toggleSlowSync() }
+            ))
+            .font(.caption)
+            .toggleStyle(.checkbox)
+            .help("When off, ClaudeQuota polls the usage API every 60 seconds. When on, it polls every 5 minutes — easier on rate limits and battery, at the cost of slightly stale numbers.")
+
             Toggle("Auto-refresh tokens (experimental)", isOn: Binding(
                 get: { store.allowKeychainWrites },
                 set: { _ in store.toggleAllowKeychainWrites() }
@@ -230,6 +234,8 @@ struct UsageMenuView: View {
             .font(.caption)
             .toggleStyle(.checkbox)
             .help("When off, this app never writes to the Claude Code keychain entry. When on, it refreshes expired OAuth tokens and writes only accessToken / refreshToken / expiresAt back — skipping the write when values already match. If credentials expire, the safer path is to open Claude Code to refresh them.")
+
+            displaySettings
 
             Divider()
 
@@ -248,6 +254,60 @@ struct UsageMenuView: View {
             .buttonStyle(.plain)
             .font(.caption)
             .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Display settings
+
+    @ViewBuilder
+    private var displaySettings: some View {
+        // Merge currently-returned keys with any we've ever seen so toggles
+        // don't disappear if a limit drops out of a response.
+        let liveKeys = store.apiQuota.map { Array($0.limits.keys) } ?? []
+        let keys = LimitKind.sorted(Array(Set(liveKeys).union(store.knownLimitKeys)))
+
+        if !keys.isEmpty {
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(keys, id: \.self) { key in
+                        limitDisplayRow(key: key)
+                    }
+                }
+                .padding(.top, 4)
+            } label: {
+                Text("Display")
+                    .font(.caption)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func limitDisplayRow(key: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Toggle(LimitKind.name(for: key), isOn: Binding(
+                get: { !store.popoverHidden(for: key) },
+                set: { store.setPopoverHidden(!$0, for: key) }
+            ))
+            .font(.caption)
+            .toggleStyle(.checkbox)
+
+            HStack {
+                Text("Menu bar:")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Picker("", selection: Binding(
+                    get: { store.menuBarDisplay(for: key) },
+                    set: { store.setMenuBarDisplay($0, for: key) }
+                )) {
+                    ForEach(LimitDisplay.allCases, id: \.self) { option in
+                        Text(option.label).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .font(.caption2)
+            }
+            .padding(.leading, 18)
         }
     }
 

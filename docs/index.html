@@ -81,14 +81,27 @@
       margin-bottom: 20px;
     }
 
-    /* SCREENSHOT */
+    /* SCREENSHOT — never upscale past native resolution */
     .screenshot-wrap {
-      max-width: 860px; margin: 50px auto 0;
+      max-width: 340px; margin: 50px auto 0;
       border-radius: 14px; overflow: hidden;
       box-shadow: 0 20px 60px rgba(0,0,0,0.12);
       border: 1px solid var(--border);
     }
-    .screenshot-wrap img { width: 100%; display: block; }
+    .screenshot-wrap img { width: 100%; max-width: 340px; height: auto; display: block; }
+
+    /* SCREENSHOT GALLERY */
+    .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-top: 8px; justify-items: center; }
+    .gallery figure { margin: 0; display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 340px; }
+    .gallery img {
+      width: 100%; max-width: 340px; height: auto;
+      border-radius: 14px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+      border: 1px solid var(--border);
+      background: #1a1325;
+    }
+    .gallery figcaption { margin-top: 14px; font-size: 0.9rem; color: var(--muted); line-height: 1.5; max-width: 320px; }
+    .gallery figcaption strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; }
 
     /* SECTIONS */
     section { padding: 80px 2rem; }
@@ -188,6 +201,7 @@
   </a>
   <div class="nav-links">
     <a href="#features">Features</a>
+    <a href="#screenshots">Screenshots</a>
     <a href="#how-it-works">How it works</a>
     <a href="#install">Install</a>
     <a href="#privacy">Privacy</a>
@@ -247,6 +261,21 @@
         <p>Per-model token counts from your local session files. Toggle off for pure API-only mode.</p>
       </div>
       <div class="feature-card">
+        <div class="icon">🎛️</div>
+        <h3>Per-limit controls</h3>
+        <p>Hide individual counters from the popover, or only surface them in the menu bar above a threshold you pick (Always / ≥10% … ≥90% / 100%).</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🪟</div>
+        <h3>All weekly sub-limits</h3>
+        <p>Handles every counter Anthropic returns — All Models, Sonnet, Opus, Claude Design, Cowork, OAuth Apps — and picks up new ones automatically.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🐢</div>
+        <h3>Slow sync mode</h3>
+        <p>Poll every 5 minutes instead of 60 seconds for gentler API use. One checkbox, persists across launches.</p>
+      </div>
+      <div class="feature-card">
         <div class="icon">💰</div>
         <h3>Today's cost</h3>
         <p>Estimated USD spend based on published Anthropic pricing, updated as you work.</p>
@@ -261,6 +290,37 @@
         <h3>Auto token refresh</h3>
         <p>Automatically refreshes expired OAuth tokens and saves them back — Claude Code keeps working seamlessly.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCREENSHOTS -->
+<section id="screenshots">
+  <div class="section-inner">
+    <div class="section-label">Screenshots</div>
+    <h2>Three views, one menu bar app</h2>
+    <div class="gallery">
+      <figure>
+        <img src="screenshot.png" alt="Popover with Local Details on"/>
+        <figcaption>
+          <strong>Full view</strong>
+          Local Details on — per-model token breakdown and today's estimated cost.
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="screenshot-api-only.png" alt="Popover with Local Details off"/>
+        <figcaption>
+          <strong>API-only</strong>
+          Local Details off — percentages and countdowns straight from the API, no file access.
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="screenshot-display.png" alt="Display settings expanded"/>
+        <figcaption>
+          <strong>Display settings</strong>
+          Hide any counter or only show it in the menu bar above a threshold you pick.
+        </figcaption>
+      </figure>
     </div>
   </div>
 </section>

@@ -18,13 +18,13 @@ struct SettingsView: View {
 
             Section("Current Quota") {
                 if let quota = store.apiQuota {
-                    LabeledContent("5-Hour Usage", value: "\(Int(quota.fiveHour.utilization))%")
-                    if let reset = quota.fiveHour.resetsAtDate {
-                        LabeledContent("5-Hour Resets", value: Formatting.timeRemaining(reset.timeIntervalSinceNow))
-                    }
-                    LabeledContent("7-Day Usage", value: "\(Int(quota.sevenDay.utilization))%")
-                    if let reset = quota.sevenDay.resetsAtDate {
-                        LabeledContent("7-Day Resets", value: Formatting.timeRemaining(reset.timeIntervalSinceNow))
+                    ForEach(LimitKind.sorted(Array(quota.limits.keys)), id: \.self) { key in
+                        if let window = quota.limits[key] {
+                            LabeledContent("\(LimitKind.name(for: key)) Usage", value: "\(Int(window.utilization))%")
+                            if let reset = window.resetsAtDate {
+                                LabeledContent("\(LimitKind.name(for: key)) Resets", value: Formatting.timeRemaining(reset.timeIntervalSinceNow))
+                            }
+                        }
                     }
                 } else {
                     Text("Quota not loaded")

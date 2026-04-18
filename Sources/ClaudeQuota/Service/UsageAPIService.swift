@@ -1,9 +1,14 @@
 import Foundation
 
 /// Response from GET https://api.anthropic.com/api/oauth/usage
+///
+/// The response is decoded dynamically: every top-level key whose value matches
+/// `WindowQuota`'s shape is captured in `limits`. If a value is itself a
+/// dictionary of `WindowQuota` (one level of nesting, e.g. `weekly: {...}`),
+/// the inner keys are flattened up. This way, new limits that the backend adds
+/// (like `claude_design`) surface automatically without a code change.
 struct UsageAPIResponse: Codable {
-    let fiveHour: WindowQuota
-    let sevenDay: WindowQuota
+    let limits: [String: WindowQuota]
 
     struct WindowQuota: Codable {
         let utilization: Double    // percentage, e.g. 6.0 = 6%
@@ -23,9 +28,38 @@ struct UsageAPIResponse: Codable {
         }
     }
 
-    enum CodingKeys: String, CodingKey {
-        case fiveHour = "five_hour"
-        case sevenDay = "seven_day"
+    // Back-compat accessors.
+    var fiveHour: WindowQuota? { limits["five_hour"] }
+    var sevenDay: WindowQuota? { limits["seven_day"] }
+
+    private struct DynamicKey: CodingKey {
+        let stringValue: String
+        var intValue: Int? { nil }
+        init?(stringValue: String) { self.stringValue = stringValue }
+        init?(intValue: Int) { return nil }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: DynamicKey.self)
+        var result: [String: WindowQuota] = [:]
+        for key in container.allKeys {
+            if let quota = try? container.decode(WindowQuota.self, forKey: key) {
+                result[key.stringValue] = quota
+            } else if let nested = try? container.decode([String: WindowQuota].self, forKey: key) {
+                for (innerKey, quota) in nested {
+                    result[innerKey] = quota
+                }
+            }
+        }
+        self.limits = result
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: DynamicKey.self)
+        for (key, quota) in limits {
+            guard let codingKey = DynamicKey(stringValue: key) else { continue }
+            try container.encode(quota, forKey: codingKey)
+        }
     }
 }
 

@@ -2,17 +2,32 @@
 
 A lightweight macOS menu bar app that shows your [Claude Code](https://claude.ai/code) quota usage in real time.
 
-![ClaudeQuota menu bar and dropdown](screenshot.png)
+<img src="screenshot.png" alt="ClaudeQuota menu bar and dropdown" width="340"/>
 
 ## Features
 
 - **Exact percentages** — reads directly from Anthropic's internal quota API, same numbers Claude Code shows
 - **Live countdown** — 5-hour and 7-day reset timers tick down in real time
+- **All weekly sub-limits** — All Models, Sonnet, Opus, Claude Design (a.k.a. `seven_day_omelette`), Cowork, OAuth Apps, plus any future ones the API adds
 - **Color coded** — green → orange → red as you approach limits
 - **Peak hours indicator** — ⚡ badge during weekday peak hours (5am–11am PT) when 5-hour limits are consumed faster
+- **Per-limit display control** — hide individual counters from the popover, or only show them in the menu bar above a threshold (Always / Hide / ≥10% … ≥90% / 100%)
 - **Model breakdown** — per-model token counts from local session files (toggle off for pure API-only mode)
 - **Today's cost** — estimated USD spend based on published Anthropic pricing
+- **Slow sync mode** — poll every 5 minutes instead of 60 seconds, easier on rate limits
 - **Zero config** — reads Claude Code's existing keychain credentials, no setup required
+
+### Screenshots
+
+<p align="center">
+  <img src="screenshot.png" alt="Full popover with local details" width="300"/>
+  <img src="screenshot-api-only.png" alt="API-only popover" width="300"/>
+  <img src="screenshot-display.png" alt="Per-limit display controls" width="300"/>
+</p>
+
+- **Full view** — Local Details on; per-model token breakdown and today's cost
+- **API-only** — Local Details off; percentages and countdowns straight from the API
+- **Display settings** — hide any counter or only show it in the menu bar above a threshold you pick
 
 ## Requirements
 

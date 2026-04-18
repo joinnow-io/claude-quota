@@ -26,6 +26,18 @@ final class QuotaStore {
     // clobbering state Claude Code writes (e.g. connector tokens).
     var allowKeychainWrites: Bool = false
 
+    // Slow sync: poll the API every 5 minutes instead of every 60 seconds.
+    // Useful for avoiding rate limits or reducing background work.
+    var slowSync: Bool = false
+
+    // Per-limit display preferences (keyed by API snake_case key).
+    var menuBarDisplay: [String: LimitDisplay] = [:]
+    var popoverHidden: [String: Bool] = [:]
+
+    // LimitKind.knownOrder ∪ current API keys. Not persisted — so renamed
+    // limit keys don't linger in the Display picker after a code update.
+    var knownLimitKeys: Set<String> = Set(LimitKind.knownOrder)
+
     // Metadata
     var credentials: ClaudeCredentials?
     var peakStatus: PeakHours.Status = PeakHours.status()
@@ -48,39 +60,61 @@ final class QuotaStore {
     // MARK: - Computed
 
     var fiveHourPercentage: Double? {
-        apiQuota?.fiveHour.utilization
+        apiQuota?.fiveHour?.utilization
     }
 
     var sevenDayPercentage: Double? {
-        apiQuota?.sevenDay.utilization
+        apiQuota?.sevenDay?.utilization
     }
 
     var fiveHourTimeRemaining: String? {
-        guard let resetsAt = apiQuota?.fiveHour.resetsAtDate else { return nil }
+        guard let resetsAt = apiQuota?.fiveHour?.resetsAtDate else { return nil }
         return Formatting.timeRemaining(resetsAt.timeIntervalSince(now))
     }
 
     var sevenDayTimeRemaining: String? {
-        guard let resetsAt = apiQuota?.sevenDay.resetsAtDate else { return nil }
+        guard let resetsAt = apiQuota?.sevenDay?.resetsAtDate else { return nil }
         return Formatting.timeRemaining(resetsAt.timeIntervalSince(now))
     }
 
+    /// Keys visible in the menu bar right now (after filtering hide + thresholds).
+    /// Ordered for stable display.
+    private func visibleMenuBarKeys(for quota: UsageAPIResponse) -> [String] {
+        LimitKind.sorted(Array(quota.limits.keys)).filter { key in
+            guard let window = quota.limits[key] else { return false }
+            let display = menuBarDisplay(for: key)
+            if display == .hide { return false }
+            if let threshold = display.threshold, window.utilization < threshold {
+                return false
+            }
+            return true
+        }
+    }
+
+    /// Empty string when no limits should be shown — the menu bar falls back
+    /// to an icon-only label in that case (see ClaudeQuotaApp).
     var menuBarTitle: String {
         guard let quota = apiQuota else {
             if case .error = quotaState { return "— err" }
             return "..."
         }
-        let fh = "\(Int(quota.fiveHour.utilization.rounded()))%"
-        let sd = "\(Int(quota.sevenDay.utilization.rounded()))%"
+        let visible = visibleMenuBarKeys(for: quota)
+        let segments: [String] = visible.compactMap { key in
+            guard let window = quota.limits[key] else { return nil }
+            let pct = "\(Int(window.utilization.rounded()))%"
+            let time = window.resetsAtDate.map { Formatting.timeRemaining($0.timeIntervalSince(now)) } ?? ""
+            return time.isEmpty ? pct : "\(pct) \(time)"
+        }
+        if segments.isEmpty { return "" }
         let peak = peakStatus.isPeak ? "\u{26A1}" : ""
-        let fhTime = fiveHourTimeRemaining ?? ""
-        let sdTime = sevenDayTimeRemaining ?? ""
-        return "\(peak)\(fh) \(fhTime) | \(sd) \(sdTime)"
+        return peak + segments.joined(separator: " | ")
     }
 
     var menuBarColor: MenuBarColor {
         guard let quota = apiQuota else { return .green }
-        let maxPct = max(quota.fiveHour.utilization, quota.sevenDay.utilization)
+        let visible = visibleMenuBarKeys(for: quota)
+        let pctValues = visible.compactMap { quota.limits[$0]?.utilization }
+        guard let maxPct = pctValues.max() else { return .green }
         if maxPct >= 95 { return .red }
         if maxPct >= 80 { return .orange }
         return .green
@@ -89,6 +123,38 @@ final class QuotaStore {
     enum MenuBarColor {
         case green, orange, red
     }
+
+    // MARK: - Per-limit preferences
+
+    func menuBarDisplay(for key: String) -> LimitDisplay {
+        if let explicit = menuBarDisplay[key] { return explicit }
+        // Defaults: only the two core windows show in the menu bar out of the box.
+        return (key == "five_hour" || key == "seven_day") ? .always : .hide
+    }
+
+    func setMenuBarDisplay(_ value: LimitDisplay, for key: String) {
+        menuBarDisplay[key] = value
+        UserDefaults.standard.set(value.rawValue, forKey: Self.menuBarDisplayKey(for: key))
+    }
+
+    func popoverHidden(for key: String) -> Bool {
+        popoverHidden[key] ?? false
+    }
+
+    func setPopoverHidden(_ hidden: Bool, for key: String) {
+        popoverHidden[key] = hidden
+        UserDefaults.standard.set(hidden, forKey: Self.popoverHiddenKey(for: key))
+    }
+
+    private static func menuBarDisplayKey(for key: String) -> String {
+        "menuBarDisplay.\(key)"
+    }
+
+    private static func popoverHiddenKey(for key: String) -> String {
+        "popover.hidden.\(key)"
+    }
+
+    private static let knownLimitKeysDefaultsKey = "knownLimitKeys"
 
     // MARK: - Lifecycle
 
@@ -105,16 +171,21 @@ final class QuotaStore {
         countdown.resume()
         countdownTimer = countdown
 
-        // 60-second timer for API refresh
+        startAPITimer()
+
+        startLocalDataIfEnabled()
+    }
+
+    private func startAPITimer() {
+        apiTimer?.cancel()
+        let interval: TimeInterval = slowSync ? 300 : 60
         let api = DispatchSource.makeTimerSource(queue: .main)
-        api.schedule(deadline: .now() + 60, repeating: 60)
+        api.schedule(deadline: .now() + interval, repeating: interval)
         api.setEventHandler { [weak self] in
             self?.periodicUpdate()
         }
         api.resume()
         apiTimer = api
-
-        startLocalDataIfEnabled()
     }
 
     func stop() {
@@ -144,6 +215,7 @@ final class QuotaStore {
                 let response = try await apiService.fetchUsage(credentials: creds)
                 await MainActor.run {
                     self.quotaState = .loaded(response)
+                    self.recordSeenLimitKeys(response.limits.keys)
                 }
             } catch UsageAPIError.rateLimited {
                 await MainActor.run {
@@ -173,6 +245,15 @@ final class QuotaStore {
         }
     }
 
+    func toggleSlowSync() {
+        slowSync.toggle()
+        UserDefaults.standard.set(slowSync, forKey: "slowSync")
+        // Recreate the API timer with the new interval.
+        if apiTimer != nil {
+            startAPITimer()
+        }
+    }
+
     func toggleAllowKeychainWrites() {
         allowKeychainWrites.toggle()
         UserDefaults.standard.set(allowKeychainWrites, forKey: "allowKeychainWrites")
@@ -188,6 +269,51 @@ final class QuotaStore {
         credentials = KeychainService.readCredentials()
         showLocalData = UserDefaults.standard.object(forKey: "showLocalData") as? Bool ?? true
         allowKeychainWrites = UserDefaults.standard.bool(forKey: "allowKeychainWrites")
+        slowSync = UserDefaults.standard.bool(forKey: "slowSync")
+        loadLimitPreferences()
+    }
+
+    private func loadLimitPreferences() {
+        // Purge legacy "knownLimitKeys" defaults entry (pre-real-API keys like
+        // "sonnet" / "claude_design"). We derive knownLimitKeys live now.
+        UserDefaults.standard.removeObject(forKey: Self.knownLimitKeysDefaultsKey)
+
+        knownLimitKeys = Set(LimitKind.knownOrder)
+
+        let defaults = UserDefaults.standard
+        var menuBar: [String: LimitDisplay] = [:]
+        var hidden: [String: Bool] = [:]
+        for key in knownLimitKeys {
+            if let raw = defaults.string(forKey: Self.menuBarDisplayKey(for: key)),
+               let value = LimitDisplay(rawValue: raw) {
+                menuBar[key] = value
+            }
+            if defaults.object(forKey: Self.popoverHiddenKey(for: key)) != nil {
+                hidden[key] = defaults.bool(forKey: Self.popoverHiddenKey(for: key))
+            }
+        }
+        menuBarDisplay = menuBar
+        popoverHidden = hidden
+    }
+
+    private func recordSeenLimitKeys(_ keys: some Sequence<String>) {
+        // Replace — not formUnion — so keys that disappear from the API (or were
+        // wrong guesses in an earlier release) don't linger forever.
+        knownLimitKeys = Set(keys).union(LimitKind.knownOrder)
+
+        // Pick up any prefs saved for keys we hadn't seen before.
+        let defaults = UserDefaults.standard
+        for key in knownLimitKeys where menuBarDisplay[key] == nil {
+            if let raw = defaults.string(forKey: Self.menuBarDisplayKey(for: key)),
+               let value = LimitDisplay(rawValue: raw) {
+                menuBarDisplay[key] = value
+            }
+        }
+        for key in knownLimitKeys where popoverHidden[key] == nil {
+            if defaults.object(forKey: Self.popoverHiddenKey(for: key)) != nil {
+                popoverHidden[key] = defaults.bool(forKey: Self.popoverHiddenKey(for: key))
+            }
+        }
     }
 
     private func startLocalDataIfEnabled() {

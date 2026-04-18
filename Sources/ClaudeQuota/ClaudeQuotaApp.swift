@@ -31,13 +31,20 @@ struct ClaudeQuotaApp: App {
             case .red: return .red
             }
         }()
+        let title = store.menuBarTitle
 
         return HStack(spacing: 2) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
-            Text(store.menuBarTitle)
-                .font(.caption.monospacedDigit())
+            if title.isEmpty {
+                // Every limit hidden / below threshold — show the app icon only.
+                Image(systemName: "gauge.medium")
+                    .foregroundStyle(color)
+            } else {
+                Circle()
+                    .fill(color)
+                    .frame(width: 6, height: 6)
+                Text(title)
+                    .font(.caption.monospacedDigit())
+            }
         }
         .onAppear {
             store.start()
