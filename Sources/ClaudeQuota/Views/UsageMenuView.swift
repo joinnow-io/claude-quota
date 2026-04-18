@@ -223,6 +223,14 @@ struct UsageMenuView: View {
             .font(.caption)
             .toggleStyle(.checkbox)
 
+            Toggle("Auto-refresh tokens (experimental)", isOn: Binding(
+                get: { store.allowKeychainWrites },
+                set: { _ in store.toggleAllowKeychainWrites() }
+            ))
+            .font(.caption)
+            .toggleStyle(.checkbox)
+            .help("When off, this app never writes to the Claude Code keychain entry. When on, it refreshes expired OAuth tokens and writes only accessToken / refreshToken / expiresAt back — skipping the write when values already match. If credentials expire, the safer path is to open Claude Code to refresh them.")
+
             Divider()
 
             Button(action: { NSWorkspace.shared.open(Links.about) }) {

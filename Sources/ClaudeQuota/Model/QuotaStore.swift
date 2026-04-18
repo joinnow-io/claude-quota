@@ -21,6 +21,11 @@ final class QuotaStore {
     var snapshot: UsageSnapshot?
     var showLocalData: Bool = true
 
+    // Whether this app is allowed to refresh OAuth tokens and write back to the
+    // shared `Claude Code-credentials` keychain entry. Off by default to avoid
+    // clobbering state Claude Code writes (e.g. connector tokens).
+    var allowKeychainWrites: Bool = false
+
     // Metadata
     var credentials: ClaudeCredentials?
     var peakStatus: PeakHours.Status = PeakHours.status()
@@ -124,6 +129,7 @@ final class QuotaStore {
         let now = Date()
         if force {
             rateLimitedUntil = .distantPast // manual refresh always clears backoff
+            loadCredentials()
         }
         guard now >= rateLimitedUntil && (force || now.timeIntervalSince(lastAPIFetch) >= minFetchInterval) else {
             return
@@ -167,11 +173,21 @@ final class QuotaStore {
         }
     }
 
+    func toggleAllowKeychainWrites() {
+        allowKeychainWrites.toggle()
+        UserDefaults.standard.set(allowKeychainWrites, forKey: "allowKeychainWrites")
+        // Clear error if user just enabled refresh
+        if allowKeychainWrites, case .error = quotaState {
+            fetchAPIQuota(force: true)
+        }
+    }
+
     // MARK: - Private
 
     private func loadCredentials() {
         credentials = KeychainService.readCredentials()
         showLocalData = UserDefaults.standard.object(forKey: "showLocalData") as? Bool ?? true
+        allowKeychainWrites = UserDefaults.standard.bool(forKey: "allowKeychainWrites")
     }
 
     private func startLocalDataIfEnabled() {

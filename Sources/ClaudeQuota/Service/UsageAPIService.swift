@@ -67,7 +67,11 @@ actor UsageAPIService {
             return token
         }
 
-        // Need to refresh
+        // Token expired. Refreshing burns the single-use refresh token and writes
+        // to the shared keychain entry — skip unless the user has opted in.
+        guard UserDefaults.standard.bool(forKey: "allowKeychainWrites") else {
+            throw UsageAPIError.credentialsExpired
+        }
         return try await refreshToken(credentials: credentials)
     }
 
@@ -105,8 +109,11 @@ actor UsageAPIService {
 
         // Save new tokens to keychain — refresh tokens are single-use,
         // so we MUST persist the replacement or future refreshes will fail.
+        // We only touch the three auth fields; plan metadata (subscriptionType,
+        // rateLimitTier) is Claude Code's responsibility.
         let newRefreshToken = json["refresh_token"] as? String
         Self.updateKeychainTokens(
+            priorAccessToken: credentials.accessToken,
             accessToken: newAccessToken,
             refreshToken: newRefreshToken,
             expiresIn: expiresIn
@@ -115,8 +122,11 @@ actor UsageAPIService {
         return newAccessToken
     }
 
-    /// Update access + refresh tokens in the keychain.
-    private static func updateKeychainTokens(accessToken: String, refreshToken: String?, expiresIn: Int) {
+    /// Merge refreshed auth fields into the shared keychain entry. Minimizes risk by:
+    /// 1. Only overwriting accessToken / refreshToken / expiresAt — never other keys.
+    /// 2. Skipping the write if the target fields already match (no-op).
+    /// 3. Logging a warning if Claude Code appears to have written concurrently.
+    private static func updateKeychainTokens(priorAccessToken: String?, accessToken: String, refreshToken: String?, expiresIn: Int) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "Claude Code-credentials",
@@ -133,11 +143,29 @@ actor UsageAPIService {
             return
         }
 
+        // Conflict detection — if the token on disk no longer matches what we
+        // started the refresh with, Claude Code wrote in the meantime. We still
+        // have to persist our new refresh token (old one is burned), but flag it.
+        let currentAccess = oauth["accessToken"] as? String
+        if let prior = priorAccessToken, let current = currentAccess, prior != current {
+            print("⚠️ Keychain accessToken changed during refresh — overwriting with our new token")
+        }
+
+        let newExpiresAt = (Date().timeIntervalSince1970 + Double(expiresIn)) * 1000
+
+        // No-op guard: if every field we'd write already matches, skip the write.
+        let accessMatches = currentAccess == accessToken
+        let refreshMatches = refreshToken == nil || (oauth["refreshToken"] as? String) == refreshToken
+        let expiryMatches = abs(((oauth["expiresAt"] as? Double) ?? 0) - newExpiresAt) < 1000 // 1s slack
+        if accessMatches && refreshMatches && expiryMatches {
+            return
+        }
+
         oauth["accessToken"] = accessToken
         if let refreshToken = refreshToken {
             oauth["refreshToken"] = refreshToken
         }
-        oauth["expiresAt"] = (Date().timeIntervalSince1970 + Double(expiresIn)) * 1000
+        oauth["expiresAt"] = newExpiresAt
         json["claudeAiOauth"] = oauth
 
         guard let updatedData = try? JSONSerialization.data(withJSONObject: json) else { return }
@@ -192,6 +220,7 @@ enum UsageAPIError: Error, LocalizedError {
     case httpError(Int)
     case tokenRefreshFailed
     case rateLimited
+    case credentialsExpired
 
     var errorDescription: String? {
         switch self {
@@ -202,6 +231,7 @@ enum UsageAPIError: Error, LocalizedError {
         case .httpError(let code): return "HTTP \(code)"
         case .tokenRefreshFailed: return "Token refresh failed"
         case .rateLimited: return "Rate limited, retrying..."
+        case .credentialsExpired: return "Credentials expired — open Claude Code to refresh"
         }
     }
 }
